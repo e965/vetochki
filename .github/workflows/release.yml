@@ -1,0 +1,80 @@
+name: release
+
+# Run manually: four native builds in parallel; with a tag given, they are published as a GitHub
+# release (the tag is created on the built commit if it does not exist). The dependency cache is
+# saved by runs on master only and restored by every run.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, e.g. v0.1.0 (empty = build only)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - { os: ubuntu-26.04, name: linux-x86_64 }
+          - { os: ubuntu-26.04-arm, name: linux-aarch64 }
+          - { os: windows-2025, name: windows-x86_64 }
+          - { os: windows-11-arm, name: windows-aarch64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # Host toolchain of each runner: MSVC on Windows (Visual Studio is preinstalled there; Rust
+      # has no aarch64 GNU target for Windows), GNU on Linux.
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.name }}
+          save-if: ${{ github.ref == 'refs/heads/master' }}
+
+      - run: cargo test --workspace --release
+
+      - run: cargo build --release -p vetochki
+
+      - name: Package
+        shell: bash
+        run: |
+          mkdir dist
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            cp target/release/vetochki.exe "dist/vetochki-${{ matrix.name }}.exe"
+          else
+            tar -czf "dist/vetochki-${{ matrix.name }}.tar.gz" -C target/release vetochki
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: vetochki-${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    if: inputs.tag != ''
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      # Re-running the workflow re-uploads the files into the existing release.
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1 \
+            || gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "$TAG" --generate-notes
+          gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber

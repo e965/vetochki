@@ -207,6 +207,13 @@ cargo +stable-x86_64-pc-windows-gnu build --release -p vetochki
 ```
 Linux/macOS: `cargo build --release -p vetochki`.
 
+**Releases (CI).** `.github/workflows/release.yml` runs manually only (`workflow_dispatch`). It
+builds on four native runners in parallel — `ubuntu-26.04`, `ubuntu-26.04-arm`, `windows-2025`,
+`windows-11-arm` (MSVC there: Visual Studio is preinstalled and Rust has no `aarch64` GNU target for
+Windows) — running `cargo test` first. With a `tag` input the four binaries are published as a
+GitHub release (the tag is created on the built commit if missing); without one it only builds.
+Dependencies are cached with `Swatinem/rust-cache`; runs on `master` save the cache.
+
 **Local paths in the binary.** Panic sites embed their source location, and cargo passes registry
 crates to rustc by absolute path, so even a stripped exe contains `<CARGO_HOME>\registry\src\…`
 (user name included). `trim-paths` is still unstable in cargo 1.99; on stable remap the prefix
