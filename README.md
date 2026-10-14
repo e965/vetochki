@@ -2,6 +2,8 @@
 
 An attempt to reverse engineer and rewrite of my friend’s old application using AI agents.
 
+![vetochki screenshot](./screenshot.jpg)
+
 ## How to build
 
 Windows, pure Rust — no Visual Studio, Windows SDK or MinGW needed.
