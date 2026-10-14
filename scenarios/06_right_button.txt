@@ -1,0 +1,15 @@
+# onmousedown/onmouseup ignore $button: the right button drags too.
+wait 1500
+move 688 208
+down right
+wait 150
+check after_press score=1 branch=584,136 timer=0
+up right
+wait 100
+down right
+move 900 300 300
+wait 150
+check dragging score=1 branch=796,228 timer=1
+up right
+wait 150
+check released score=1 branch=796,228 timer=0

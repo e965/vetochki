@@ -1,0 +1,15 @@
+[package]
+name = "vetochki"
+description = "Vetochki reimplemented with winit + softbuffer (no PHP, no SoulEngine, no SFX)"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+vetochki-core = { path = "../core" }
+# no Wayland client-side decorations: the window is borderless anyway (−0.5 MB on Linux)
+winit = { version = "0.30", default-features = false, features = ["rwh_06", "x11", "wayland", "wayland-dlopen"] }
+softbuffer = "0.4"
+fontdue = "0.9"
+image-webp = "0.2"

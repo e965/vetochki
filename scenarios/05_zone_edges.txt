@@ -1,0 +1,19 @@
+# The zone test is strict (< 150) on both axes.
+wait 1500
+move 688 208
+down
+wait 150
+up
+wait 100
+down
+move 254 100 400               # branch (150, 28): x is not < 150
+wait 200
+check edge_x score=1 branch=150,28 timer=1
+move 254 221 300               # branch (150, 149)
+move 253 222 50                # branch (149, 150): y is not < 150
+wait 200
+check edge_y score=1 branch=149,150 timer=1
+move 253 221 50                # branch (149, 149): inside
+wait 200
+check inside score=2 branch=584,136 timer=0
+up

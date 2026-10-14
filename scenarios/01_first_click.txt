@@ -1,0 +1,12 @@
+# The very first press on the branch scores a point immediately: label1.Caption starts as
+# "Счет" and PHP compares "Счет" >= "2" byte-wise (true), so the reset block runs on tick 1.
+wait 1500                      # startup
+move 688 208                   # centre of the branch at its home position (584,136)+(104,72)
+check start score=Счет branch=584,136 label=Счет timer=0
+down
+wait 200
+check after_press score=1 branch=584,136 label=0 timer=0
+move 700 400 300               # dragging does nothing: the timer was switched off by the reset
+wait 150
+check still_home score=1 branch=584,136 timer=0
+up

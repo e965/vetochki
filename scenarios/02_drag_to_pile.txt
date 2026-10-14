@@ -1,0 +1,24 @@
+# Drag the branch into the zone (image1.Left < 150 and image1.Top < 150, i.e. cursor x < 254,
+# y < 222, over the leaf pile): it snaps back home, the timer stops, the score goes up.
+wait 1500
+move 688 208
+down                           # free first point
+wait 150
+up
+wait 150
+down
+wait 100
+move 400 200 300
+wait 150
+check dragging score=1 branch=296,128 label=0 timer=1
+move 200 180 300
+wait 200
+check scored score=2 branch=584,136 label=0 timer=0
+up
+wait 100
+move 688 208
+down
+move 150 150 400
+wait 200
+check scored_again score=3 branch=584,136 timer=0
+up

@@ -1,0 +1,9 @@
+[package]
+name = "vetochki-core"
+description = "GUI-independent model of Vetochki (SP.exe): layout, PHP value semantics, game state machine, scenarios"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]

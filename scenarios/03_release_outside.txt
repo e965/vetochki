@@ -1,0 +1,18 @@
+# Releasing outside the zone leaves the branch where it is; it can be picked up again there.
+wait 1500
+move 688 208
+down
+wait 150
+up
+wait 100
+down
+move 900 500 400
+wait 200
+check moving score=1 branch=796,428 timer=1
+up
+wait 150
+check released score=1 branch=796,428 timer=0
+down                           # press again on the branch at its new place
+wait 150
+check regrabbed score=1 branch=796,428 label=0 timer=1
+up

@@ -1,0 +1,8 @@
+# edit1 is read-only and has no handlers; pressing it never starts the timer.
+wait 1500
+move 150 50
+down
+wait 150
+up
+wait 100
+check untouched score=Счет branch=584,136 label=Счет timer=0
