@@ -492,6 +492,10 @@ impl ApplicationHandler for App {
             }
             WindowEvent::Focused(f) => {
                 self.focused = f;
+                // On activation changes Windows paints a title strip over the top of the client
+                // area (this window has no caption style and no non-client area) without asking
+                // us to repaint; a full repaint covers it.
+                self.shown = None;
                 self.changed(now);
             }
             WindowEvent::ModifiersChanged(m) => self.modifiers = m.state(),
