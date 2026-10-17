@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vetochki</title>
+    <!-- Rust enables these WASM instructions by default; wasm-opt needs them enabled too. -->
+    <link data-trunk rel="rust" data-wasm-opt-params="--enable-bulk-memory --enable-nontrapping-float-to-int" />
+    <style>
+      html, body {
+        margin: 0;
+        overflow: hidden;
+        background: #e6e6e6;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        touch-action: none;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>Для запуска игры включите JavaScript.</noscript>
+  </body>
+</html>

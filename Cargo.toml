@@ -1,5 +1,5 @@
 [workspace]
-members = ["core", "app", "android"]
+members = ["core", "app", "android", "web"]
 resolver = "3"
 
 [workspace.package]

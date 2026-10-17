@@ -4,26 +4,24 @@
 //! every state change (one [`Game::observe`] line each) when debugging.
 //!
 //! A library so that `src/main.rs` (desktop) and `android/` (NativeActivity) share it.
+//! `web/` uses the same application in a browser canvas.
 
 mod paint;
 
-use std::{
-    fs::File,
-    io::Write,
-    num::NonZeroU32,
-    rc::Rc,
-    time::{Duration, Instant},
-};
+use std::{fs::File, io::Write, num::NonZeroU32, rc::Rc};
 
 use paint::{Area, Frame, Glyphs, Image, decode_webp, shrink};
 use vetochki_core::{self as model, Game, Point, Rect, Target};
+use web_time::{Duration, Instant};
+#[cfg(not(target_arch = "wasm32"))]
+use winit::window::Fullscreen;
 use winit::{
     application::ApplicationHandler,
     dpi::{PhysicalPosition, PhysicalSize},
     event::{ElementState, KeyEvent, TouchPhase, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     keyboard::{Key, KeyCode, ModifiersState, NamedKey, PhysicalKey},
-    window::{Fullscreen, Window, WindowId},
+    window::{Window, WindowId},
 };
 
 /// Themed (comctl32 v6, Windows 10) TEdit look — the original ships a Common-Controls 6 manifest.
@@ -40,8 +38,9 @@ const FORM_SIZE: (f64, f64) = (800.0, 600.0);
 /// Physical pixels per logical (96-DPI form) pixel. Desktops use the display scale, like Windows
 /// does for the DPI-unaware original. Android screens are too narrow in DPI-scaled pixels for the
 /// layout, so there the form is stretched as far as [`FORM_SIZE`] still fits the screen instead.
+/// Browser canvases use the same fit so the whole form stays reachable in a small viewport.
 fn scale_for(size: PhysicalSize<u32>, display_scale: f64) -> f64 {
-    if cfg!(target_os = "android") {
+    if cfg!(any(target_os = "android", target_arch = "wasm32")) {
         (f64::from(size.width) / FORM_SIZE.0).min(f64::from(size.height) / FORM_SIZE.1)
     } else {
         display_scale
@@ -390,6 +389,9 @@ impl App {
 
     /// `cursor_pos_x()`/`cursor_pos_y()`: GetCursorPos — screen, not form, coordinates.
     fn screen_point(&self) -> Point {
+        if cfg!(target_arch = "wasm32") {
+            return self.client_point();
+        }
         let s = self.scale();
         let origin = self
             .gfx
@@ -524,8 +526,14 @@ impl ApplicationHandler for App {
         let attrs = Window::default_attributes()
             .with_title(model::FORM_CAPTION)
             .with_decorations(false)
-            .with_resizable(false)
-            .with_fullscreen(Some(Fullscreen::Borderless(None)));
+            .with_resizable(false);
+        #[cfg(not(target_arch = "wasm32"))]
+        let attrs = attrs.with_fullscreen(Some(Fullscreen::Borderless(None)));
+        #[cfg(target_arch = "wasm32")]
+        let attrs = {
+            use winit::platform::web::WindowAttributesExtWebSys;
+            attrs.with_append(true)
+        };
         let window = Rc::new(event_loop.create_window(attrs).expect("create window"));
         let context = softbuffer::Context::new(window.clone()).expect("softbuffer context");
         let surface =
@@ -550,6 +558,10 @@ impl ApplicationHandler for App {
             }
             WindowEvent::Focused(f) => {
                 self.focused = f;
+                if !f && cfg!(target_arch = "wasm32") {
+                    self.touch = None;
+                    self.release(now);
+                }
                 // On activation changes Windows paints a title strip over the top of the client
                 // area (this window has no caption style and no non-client area) without asking
                 // us to repaint; a full repaint covers it.
@@ -590,20 +602,23 @@ impl ApplicationHandler for App {
             } => self.release(now),
             // Android touch: the first finger is the mouse, later ones are ignored. Desktop
             // touch screens already get mouse events from the OS (as the original did).
-            WindowEvent::Touch(t) if cfg!(target_os = "android") => match t.phase {
-                TouchPhase::Started if self.touch.is_none() => {
-                    self.touch = Some(t.id);
-                    self.cursor = t.location;
-                    self.press(now);
+            // Browsers report touch separately too; handle it without synthetic mouse events.
+            WindowEvent::Touch(t) if cfg!(any(target_os = "android", target_arch = "wasm32")) => {
+                match t.phase {
+                    TouchPhase::Started if self.touch.is_none() => {
+                        self.touch = Some(t.id);
+                        self.cursor = t.location;
+                        self.press(now);
+                    }
+                    TouchPhase::Moved if self.touch == Some(t.id) => self.cursor = t.location,
+                    TouchPhase::Ended | TouchPhase::Cancelled if self.touch == Some(t.id) => {
+                        self.touch = None;
+                        self.cursor = t.location;
+                        self.release(now);
+                    }
+                    _ => {}
                 }
-                TouchPhase::Moved if self.touch == Some(t.id) => self.cursor = t.location,
-                TouchPhase::Ended | TouchPhase::Cancelled if self.touch == Some(t.id) => {
-                    self.touch = None;
-                    self.cursor = t.location;
-                    self.release(now);
-                }
-                _ => {}
-            },
+            }
             _ => {}
         }
     }
@@ -633,12 +648,40 @@ impl ApplicationHandler for App {
 }
 
 pub fn run(event_loop: EventLoop<()>) {
+    #[cfg(not(target_arch = "wasm32"))]
     event_loop.run_app(&mut App::new()).expect("event loop");
+    #[cfg(target_arch = "wasm32")]
+    {
+        use winit::platform::web::EventLoopExtWebSys;
+        event_loop.spawn_app(App::new());
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn drag_timer_disarms_on_release() {
+        let mut app = App::new();
+        app.game.label = "0".into();
+        app.game.score = "1".into();
+        app.cursor = PhysicalPosition::new(688.0, 208.0);
+        let now = Instant::now();
+        app.press(now);
+        assert_eq!(app.next_tick, Some(now + TICK));
+
+        app.cursor = PhysicalPosition::new(400.0, 300.0);
+        app.tick(now + TICK, now + TICK);
+        assert_eq!(app.game.branch, Point::new(296, 228));
+        assert_eq!(app.game.score, "1");
+        assert_eq!(app.next_tick, Some(now + TICK * 2));
+
+        app.release(now + TICK);
+        assert!(!app.captured);
+        assert!(!app.game.timer);
+        assert_eq!(app.next_tick, None);
+    }
 
     #[test]
     fn background_covers_large_windows() {

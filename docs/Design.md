@@ -15,6 +15,7 @@ core/       vetochki-core   — model: constants, VCL layout math, PHP value rul
 app/        vetochki        — winit window + softbuffer CPU painting, input, timer, trace.
                               Pure Rust: Windows, Linux, macOS.
 android/    vetochki-android — Android NativeActivity entry point (cdylib) + APK metadata.
+web/        vetochki-web     — browser entry point + Trunk HTML; shares app's canvas renderer.
 scenarios/  *.txt           — behavior spec, replayed on the model by the core tests.
 ```
 
@@ -244,6 +245,11 @@ four binaries and the APK are published as a GitHub release (the tag is created 
 if missing); without one it only builds. Dependencies (and cargo-apk2) are cached with
 `Swatinem/rust-cache`; runs on `master` save the cache. The lint workflow runs clippy for the
 Windows and Android targets from Linux as well.
+
+A parallel `web` job builds `vetochki-web` with Trunk and relative resource URLs. After a tagged
+release is published, the `pages` job deploys that build to GitHub Pages. The Pages artifact is
+excluded from release downloads. Without a tag, the web build is only uploaded as a workflow
+artifact. The repository's Pages publishing source must be set to GitHub Actions.
 
 **Local paths in the binary.** Panic sites embed their source location, and cargo passes registry
 crates to rustc by absolute path, so even a stripped exe contains `<CARGO_HOME>\registry\src\…`

@@ -19,7 +19,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-          targets: x86_64-pc-windows-msvc, aarch64-linux-android
+          targets: x86_64-pc-windows-msvc, aarch64-linux-android, wasm32-unknown-unknown
 
       - uses: Swatinem/rust-cache@v2.9.2
         with:
@@ -32,3 +32,5 @@ jobs:
       - run: cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings
 
       - run: cargo clippy --workspace --all-targets --target aarch64-linux-android -- -D warnings
+
+      - run: cargo clippy -p vetochki-web --target wasm32-unknown-unknown -- -D warnings

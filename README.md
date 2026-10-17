@@ -57,6 +57,28 @@ Copy the APK to the phone and open it, or install it with `adb install`. The Bac
 
 More details (Linux/macOS, size and memory notes) in [docs/Design.md](docs/Design.md).
 
+### Web
+
+The `vetochki-web` crate runs the same game and CPU renderer in a browser canvas. Mouse and
+touch work; the scene scales to fit the viewport, including after resizing or rotating a phone.
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo install trunk --locked
+cd web
+trunk serve --open
+```
+
+For a static hosting build, run `trunk build --release` from `web/` and publish `web/dist/`.
+Resource URLs default to `./` via `web/Trunk.toml`. Serve the files over HTTP(S). Images and the
+fallback font are embedded in WASM; no backend is required. The game fills the page without
+requesting browser fullscreen.
+
+The `release` workflow also builds the web version. With a non-empty `tag`, it deploys to GitHub
+Pages after publishing the release. In the repository's **Settings → Pages → Build and deployment**,
+set **Source** to **GitHub Actions** before the first deployment. Resource URLs are relative, so
+the build works under the repository's Pages path as well as a custom domain.
+
 ## Verify a release download
 
 New workflow builds include build provenance attestations for the Windows executables, Linux

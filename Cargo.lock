@@ -1501,6 +1501,7 @@ dependencies = [
  "image-webp",
  "softbuffer",
  "vetochki-core",
+ "web-time",
  "winit",
 ]
 
@@ -1515,6 +1516,14 @@ dependencies = [
 [[package]]
 name = "vetochki-core"
 version = "0.1.0"
+
+[[package]]
+name = "vetochki-web"
+version = "0.1.0"
+dependencies = [
+ "vetochki",
+ "winit",
+]
 
 [[package]]
 name = "walkdir"
