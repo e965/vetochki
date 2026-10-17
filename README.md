@@ -47,7 +47,7 @@ $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
 # NDK r29 supports API levels up to 35, so platforms;android-35 is required
 $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "build-tools;37.0.0" \
     "platforms;android-35" "ndk;29.0.14206865"
-rustup target add aarch64-linux-android
+rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
 cargo install cargo-apk2 --locked
 
 cargo apk2 build -p vetochki-android --release   # target/release/apk/vetochki.apk

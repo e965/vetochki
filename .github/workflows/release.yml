@@ -1,6 +1,7 @@
 name: release
 
-# Run manually: four native builds in parallel; with a tag given, they are published as a GitHub
+# Run manually: four native builds and the Android APK in parallel; with a tag given, they are
+# published as a GitHub
 # release (the tag is created on the built commit if it does not exist). The dependency cache is
 # saved by runs on master only and restored by every run.
 on:
@@ -56,9 +57,43 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
+  # Android APK (all four ABIs in one file, debug-signed, see README). The runner image ships an Android SDK; the
+  # NDK and platform the build is pinned to are added to it. cargo-apk2 is cached in ~/.cargo/bin.
+  android:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android, i686-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android
+          save-if: ${{ github.ref == 'refs/heads/master' }}
+
+      - name: Android NDK and platform
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-35" "build-tools;37.0.0" "ndk;29.0.14206865" > /dev/null
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/29.0.14206865" >> "$GITHUB_ENV"
+
+      - run: cargo install cargo-apk2 --locked
+
+      - run: cargo apk2 build -p vetochki-android --release
+
+      - run: mkdir dist && cp target/release/apk/vetochki.apk dist/vetochki-android.apk
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: vetochki-android
+          path: dist/*
+          if-no-files-found: error
+
   release:
     if: inputs.tag != ''
-    needs: build
+    needs: [build, android]
     runs-on: ubuntu-26.04
     permissions:
       contents: write

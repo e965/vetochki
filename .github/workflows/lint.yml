@@ -1,7 +1,7 @@
 name: lint
 
-# rustfmt + clippy (warnings are errors). The code is pure Rust, so the Windows target is checked
-# from the Linux runner too.
+# rustfmt + clippy (warnings are errors). The code is pure Rust, so the Windows and Android
+# targets are checked from the Linux runner too (no NDK needed: nothing is linked).
 on:
   push:
     branches: [master]
@@ -19,7 +19,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-          targets: x86_64-pc-windows-msvc
+          targets: x86_64-pc-windows-msvc, aarch64-linux-android
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -30,3 +30,5 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
 
       - run: cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings
+
+      - run: cargo clippy --workspace --all-targets --target aarch64-linux-android -- -D warnings

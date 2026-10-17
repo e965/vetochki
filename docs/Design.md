@@ -194,8 +194,9 @@ and passes winit's Android event loop to `vetochki::run`. On other targets that 
 
 The activity is landscape only (`sensorLandscape`: either side up). A rotation is a resize
 (`configChanges` in the manifest), so the game state survives it. The font
-falls back to the embedded DejaVu subset (no Tahoma on Android). Only `aarch64-linux-android` is
-built; minimum Android 7 (API 24), target API 35. `android/debug.keystore` (password `android`) is
+falls back to the embedded DejaVu subset (no Tahoma on Android). One APK carries all four ABIs
+(arm64-v8a, armeabi-v7a, x86_64, x86; ~1.1 MB of code each); minimum Android 7 (API 24), target
+API 35. `android/debug.keystore` (password `android`) is
 a throwaway key for side-loading.
 
 ---
@@ -237,9 +238,12 @@ Android: `cargo apk2 build -p vetochki-android --release`, setup in the [README]
 **Releases (CI).** `.github/workflows/release.yml` runs manually only (`workflow_dispatch`). It
 builds on four native runners in parallel — `ubuntu-26.04`, `ubuntu-26.04-arm`, `windows-2025`,
 `windows-11-arm` (MSVC there: Visual Studio is preinstalled and Rust has no `aarch64` GNU target for
-Windows) — running `cargo test` first. With a `tag` input the four binaries are published as a
-GitHub release (the tag is created on the built commit if missing); without one it only builds.
-Dependencies are cached with `Swatinem/rust-cache`; runs on `master` save the cache.
+Windows) — running `cargo test` first — plus an `android` job on `ubuntu-26.04` that adds the
+pinned NDK and platform to the runner's SDK and runs `cargo apk2 build`. With a `tag` input the
+four binaries and the APK are published as a GitHub release (the tag is created on the built commit
+if missing); without one it only builds. Dependencies (and cargo-apk2) are cached with
+`Swatinem/rust-cache`; runs on `master` save the cache. The lint workflow runs clippy for the
+Windows and Android targets from Linux as well.
 
 **Local paths in the binary.** Panic sites embed their source location, and cargo passes registry
 crates to rustc by absolute path, so even a stripped exe contains `<CARGO_HOME>\registry\src\…`
