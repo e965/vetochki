@@ -14,6 +14,7 @@ core/       vetochki-core   — model: constants, VCL layout math, PHP value rul
                               scenario format + deterministic simulator. No dependencies.
 app/        vetochki        — winit window + softbuffer CPU painting, input, timer, trace.
                               Pure Rust: Windows, Linux, macOS.
+android/    vetochki-android — Android NativeActivity entry point (cdylib) + APK metadata.
 scenarios/  *.txt           — behavior spec, replayed on the model by the core tests.
 ```
 
@@ -71,7 +72,11 @@ scenarios/  *.txt           — behavior spec, replayed on the model by the core
    positions are not. `Mosaic` has no effect because picture size = control size **[C]**.
 6. **Rust.** Assets are the original pictures re-encoded as **lossy WebP** (VP8 + lossless ALPH
    alpha), decoded once with `image-webp`, shrunk once to the DestRect sizes with a box filter, kept
-   premultiplied. Background colour + photo + leaf pile are baked into a static layer (the two
+   premultiplied. **Deviation:** on a window larger than 2040×1528 form pixels the original shows
+   form colour right of or below the photo; here the photo is enlarged instead (bilinear, aspect
+   kept, still anchored at −8,−8) just enough to cover the window, like CSS `background-size:
+   cover` that never shrinks (`background_cover`). Smaller windows get it unscaled, as the original.
+   Background colour + photo + leaf pile are baked into a static layer (the two
    pictures are decoded for that and dropped; rebuilt only on a size/DPI change). The frame is
    updated incrementally — at 100 % directly in softbuffer's window buffer (it keeps the previous
    frame), otherwise in a 96-DPI frame that is then stretched: only the old and new branch rectangles and the score box
@@ -172,6 +177,27 @@ scenarios/  *.txt           — behavior spec, replayed on the model by the core
 | `myFunc1` (`label1->caption += '1'`) | registered as PHP function `myFunc1()`, never called **[C]** |
 | `label1` font *TeamViewer11* | label is never visible **[C]** |
 
+## 7. Android
+
+The same `vetochki` library runs as a NativeActivity: `android/src/lib.rs` defines `android_main`
+and passes winit's Android event loop to `vetochki::run`. On other targets that crate is empty.
+`app/src/main.rs` is the desktop entry point.
+
+| | desktop | Android |
+|---|---|---|
+| scale | display scale (DPI-unaware stretch) | largest that fits an 800×600 form on the screen; the rest shows background |
+| input | mouse, any button | first finger = mouse (`WindowEvent::Touch`); other fingers ignored |
+| exit | Alt+F4 | Back key (winit marks every key handled, so it is mapped explicitly) |
+| full screen | `Fullscreen::Borderless` | theme `NoActionBar.Fullscreen`: status bar hidden, navigation bar stays |
+| window | created once | dropped in `suspended`, recreated in `resumed`; a drag in progress ends on suspend |
+| redraw | incremental, damage rectangles | whole frame every time: softbuffer's Android backend reports buffer age 0 and ignores damage |
+
+The activity is landscape only (`sensorLandscape`: either side up). A rotation is a resize
+(`configChanges` in the manifest), so the game state survives it. The font
+falls back to the embedded DejaVu subset (no Tahoma on Android). Only `aarch64-linux-android` is
+built; minimum Android 7 (API 24), target API 35. `android/debug.keystore` (password `android`) is
+a throwaway key for side-loading.
+
 ---
 
 ## Testing
@@ -206,6 +232,7 @@ cargo +stable-x86_64-pc-windows-gnu build --release -p vetochki
 .\target\release\vetochki.exe
 ```
 Linux/macOS: `cargo build --release -p vetochki`.
+Android: `cargo apk2 build -p vetochki-android --release`, setup in the [README](../README.md#android).
 
 **Releases (CI).** `.github/workflows/release.yml` runs manually only (`workflow_dispatch`). It
 builds on four native runners in parallel — `ubuntu-26.04`, `ubuntu-26.04-arm`, `windows-2025`,

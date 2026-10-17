@@ -103,6 +103,27 @@ fn rgb(c: u32) -> [u32; 3] {
     [(c >> 16) & 0xff, (c >> 8) & 0xff, c & 0xff]
 }
 
+/// Source-over of one premultiplied pixel onto a 0RGB one.
+fn over(d: &mut u32, s: [u8; 4]) {
+    if s[3] == 255 {
+        *d = u32::from(s[0]) << 16 | u32::from(s[1]) << 8 | u32::from(s[2]);
+    } else if s[3] != 0 {
+        let inv = 255 - u32::from(s[3]);
+        let dc = rgb(*d);
+        let mix = |i: usize| u32::from(s[i]) + (dc[i] * inv + 127) / 255;
+        *d = mix(0) << 16 | mix(1) << 8 | mix(2);
+    }
+}
+
+/// Bilinear source position of target pixel `t` when `src` source pixels span `len` target pixels
+/// starting at `origin`: the two neighbouring source indices and the second one's weight (of 256).
+fn sample_pos(t: usize, origin: i32, len: usize, src: usize) -> (usize, usize, u32) {
+    let s = ((t as f64 - f64::from(origin) + 0.5) * src as f64 / len as f64 - 0.5)
+        .clamp(0.0, (src - 1) as f64);
+    let i = s as usize;
+    (i, (i + 1).min(src - 1), ((s - i as f64) * 256.0) as u32)
+}
+
 impl<'a> Frame<'a> {
     pub fn new(w: usize, h: usize, px: &'a mut [u32]) -> Self {
         Self {
@@ -129,16 +150,32 @@ impl<'a> Frame<'a> {
             let sy = (fy as i64 - i64::from(y)) as usize;
             for fx in a.x0..a.x1 {
                 let sx = (fx as i64 - i64::from(x)) as usize;
-                let s = img.px[sy * img.w + sx];
-                let d = &mut self.px[fy * self.w + fx];
-                if s[3] == 255 {
-                    *d = u32::from(s[0]) << 16 | u32::from(s[1]) << 8 | u32::from(s[2]);
-                } else if s[3] != 0 {
-                    let inv = 255 - u32::from(s[3]);
-                    let dc = rgb(*d);
-                    let mix = |i: usize| u32::from(s[i]) + (dc[i] * inv + 127) / 255;
-                    *d = mix(0) << 16 | mix(1) << 8 | mix(2);
-                }
+                over(&mut self.px[fy * self.w + fx], img.px[sy * img.w + sx]);
+            }
+        }
+    }
+
+    /// [`Self::blit`] with the image resized (bilinear) to `w`×`h`. Only the visible pixels are
+    /// sampled, so a target much larger than the frame costs no intermediate image.
+    pub fn blit_scaled(&mut self, img: &Image, x: i32, y: i32, w: usize, h: usize) {
+        if (w, h) == (img.w, img.h) {
+            return self.blit(img, x, y);
+        }
+        let Some(a) = Area::clipped(x, y, w, h, self.clip) else {
+            return;
+        };
+        let lerp = |p: [u8; 4], q: [u8; 4], t: u32| {
+            std::array::from_fn(|c| {
+                ((u32::from(p[c]) * (256 - t) + u32::from(q[c]) * t + 128) >> 8) as u8
+            })
+        };
+        let cols: Vec<_> = (a.x0..a.x1).map(|fx| sample_pos(fx, x, w, img.w)).collect();
+        for fy in a.y0..a.y1 {
+            let (y0, y1, ty) = sample_pos(fy, y, h, img.h);
+            let (r0, r1) = (&img.px[y0 * img.w..], &img.px[y1 * img.w..]);
+            for (fx, &(x0, x1, tx)) in (a.x0..a.x1).zip(&cols) {
+                let s = lerp(lerp(r0[x0], r0[x1], tx), lerp(r1[x0], r1[x1], tx), ty);
+                over(&mut self.px[fy * self.w + fx], s);
             }
         }
     }

@@ -1505,6 +1505,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "vetochki-android"
+version = "0.1.0"
+dependencies = [
+ "vetochki",
+ "winit",
+]
+
+[[package]]
 name = "vetochki-core"
 version = "0.1.0"
 

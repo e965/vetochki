@@ -13,3 +13,8 @@ winit = { version = "0.30", default-features = false, features = ["rwh_06", "x11
 softbuffer = "0.4"
 fontdue = "0.9"
 image-webp = "0.2"
+
+# NativeActivity backend; only pulled in when building for Android (resolver 3 ignores features of
+# target-specific dependencies for other targets).
+[target.'cfg(target_os = "android")'.dependencies]
+winit = { version = "0.30", default-features = false, features = ["android-native-activity"] }

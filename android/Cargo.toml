@@ -1,0 +1,46 @@
+[package]
+name = "vetochki-android"
+description = "Vetochki as an Android NativeActivity (cargo apk2 build -p vetochki-android --release)"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# Android loads the app as a shared library; on other targets this crate is empty.
+[lib]
+crate-type = ["cdylib"]
+
+[target.'cfg(target_os = "android")'.dependencies]
+vetochki = { path = "../app" }
+winit = { version = "0.30", default-features = false, features = ["android-native-activity"] }
+
+[package.metadata.android]
+package = "dev.e965.vetochki"
+apk_name = "vetochki"
+build_targets = ["aarch64-linux-android"]
+
+[package.metadata.android.application]
+label = "Vetochki"
+# No status bar: the original covers the whole screen.
+theme = "@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"
+
+[[package.metadata.android.application.activity]]
+name = "android.app.NativeActivity"
+# Landscape only; either side up, following the sensor.
+orientation = "sensorLandscape"
+# Rotation only resizes the window; the activity (and the game) is not recreated.
+config_changes = "orientation|screenSize|screenLayout|keyboardHidden"
+
+[[package.metadata.android.application.activity.meta_data]]
+name = "android.app.lib_name"
+value = "vetochki_android"
+
+[[package.metadata.android.application.activity.intent_filter]]
+actions = ["android.intent.action.MAIN"]
+categories = ["android.intent.category.LAUNCHER"]
+
+# A throwaway debug key: the APK is side-loaded, never published. `cargo apk2 build --release`
+# then needs no signing setup.
+[package.metadata.android.signing.release]
+path = "debug.keystore"
+keystore_password = "android"

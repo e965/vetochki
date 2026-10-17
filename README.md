@@ -35,6 +35,26 @@ building:
 $env:RUSTFLAGS = "--remap-path-prefix=$env:USERPROFILE\.cargo\registry\src=registry"
 ```
 
+### Android
+
+Built on Linux (WSL works) into a side-loadable APK signed with a debug key from the repo.
+
+```bash
+# Android SDK command-line tools unpacked to ~/Android/Sdk/cmdline-tools/latest, then:
+export ANDROID_HOME=~/Android/Sdk
+export ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/29.0.14206865
+$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+# NDK r29 supports API levels up to 35, so platforms;android-35 is required
+$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "build-tools;37.0.0" \
+    "platforms;android-35" "ndk;29.0.14206865"
+rustup target add aarch64-linux-android
+cargo install cargo-apk2 --locked
+
+cargo apk2 build -p vetochki-android --release   # target/release/apk/vetochki.apk
+```
+
+Copy the APK to the phone and open it, or install it with `adb install`. The Back key closes the app.
+
 More details (Linux/macOS, size and memory notes) in [docs/Design.md](docs/Design.md).
 
 ## Thanks
