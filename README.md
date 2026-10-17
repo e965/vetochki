@@ -57,6 +57,17 @@ Copy the APK to the phone and open it, or install it with `adb install`. The Bac
 
 More details (Linux/macOS, size and memory notes) in [docs/Design.md](docs/Design.md).
 
+## Verify a release download
+
+New workflow builds include build provenance attestations for the Windows executables, Linux
+archives and Android APK. Verify a downloaded file with the [GitHub CLI](https://cli.github.com/):
+
+```bash
+gh attestation verify vetochki-android.apk --repo e965/vetochki
+```
+
+Replace the filename with the executable or archive you downloaded.
+
 ## Thanks
 
 * [Ghidra](https://github.com/NationalSecurityAgency/ghidra)
