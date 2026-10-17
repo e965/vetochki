@@ -73,6 +73,16 @@ jobs:
           key: android
           save-if: ${{ github.ref == 'refs/heads/master' }}
 
+      - name: Release keystore
+        if: inputs.tag != ''
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          echo "CARGO_APK_RELEASE_KEYSTORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+          echo "CARGO_APK_RELEASE_KEYSTORE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+
       - name: Android NDK and platform
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
